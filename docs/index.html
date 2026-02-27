@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NaijaImport.calc — Nigeria Landed Cost Calculator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --white:#ffffff;
+  --off:#fafaf8;
+  --stone:#f5f4f0;
+  --stone2:#eeece7;
+  --border:#e4e2dc;
+  --border2:#d4d1c8;
+  --ink:#141410;
+  --ink2:#2d2d28;
+  --muted:#7a7870;
+  --muted2:#a09e96;
+  --forest:#0a5c44;
+  --forest2:#0d7a5c;
+  --forest-light:#e8f5f0;
+  --forest-mid:#a8d9cc;
+  --amber:#8b5a00;
+  --amber-l:#fff8ec;
+  --amber-m:#ffd98a;
+  --red:#9b2020;
+  --red-l:#fdf2f2;
+  --cobalt:#1a3a6e;
+  --cobalt-l:#eef2fa;
+  --cobalt-m:#b8c8e8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--off);color:var(--ink);min-height:100vh;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--stone);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* TOPBAR */
+.topbar{background:var(--ink);padding:0 40px;height:48px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.topbar-brand{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:#fff;letter-spacing:.04em;}
+.topbar-brand span{color:#4ade80;}
+.topbar-right{display:flex;align-items:center;gap:20px;}
+.topbar-tag{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:.08em;}
+.live-badge{display:flex;align-items:center;gap:5px;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.2);padding:4px 10px;border-radius:100px;}
+.live-dot{width:5px;height:5px;border-radius:50%;background:#4ade80;animation:blink 1.4s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.live-text{font-family:'JetBrains Mono',monospace;font-size:9px;color:#4ade80;letter-spacing:.1em;}
+
+/* FX STRIP */
+.fx-strip{background:var(--white);border-bottom:1px solid var(--border);padding:0 40px;height:44px;display:flex;align-items:center;gap:0;overflow:hidden;}
+.fx-pair{display:flex;align-items:center;gap:10px;padding:0 24px;border-right:1px solid var(--border);height:100%;flex-shrink:0;}
+.fx-pair:first-child{padding-left:0;}
+.fx-name{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.06em;}
+.fx-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ink2);}
+.fx-loading{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);padding:0 24px;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* STAT STRIP */
+.stat-strip{background:var(--ink);padding:18px 40px;display:flex;gap:0;overflow:auto;}
+.stat-item{padding:0 32px;border-right:1px solid rgba(255,255,255,0.08);flex-shrink:0;}
+.stat-item:first-child{padding-left:0;}
+.stat-val{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;line-height:1;}
+.stat-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:rgba(255,255,255,0.35);text-transform:uppercase;margin-top:4px;}
+.stat-chg{font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:2px;}
+
+/* HERO */
+.hero{padding:60px 40px 40px;max-width:1200px;margin:0 auto;}
+.hero-pre{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--forest2);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.hero-pre::before{content:'';display:block;width:24px;height:1px;background:var(--forest2);}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(36px,5vw,62px);font-weight:900;line-height:1.05;color:var(--ink);margin-bottom:16px;}
+.hero h1 em{font-style:italic;color:var(--forest2);}
+.hero-sub{font-size:15px;color:var(--muted);max-width:560px;line-height:1.7;font-weight:400;}
+.hero-meta{display:flex;align-items:center;gap:20px;margin-top:20px;flex-wrap:wrap;}
+.meta-tag{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:500;}
+.meta-dot{width:5px;height:5px;border-radius:50%;background:var(--forest2);}
+
+/* MAIN */
+.main{max-width:1200px;margin:0 auto;padding:40px;}
+.two-col{display:grid;grid-template-columns:480px 1fr;gap:28px;align-items:start;}
+@media(max-width:960px){.two-col{grid-template-columns:1fr;}}
+
+/* FORM CARD */
+.form-card{background:var(--white);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.04);}
+.form-header{padding:22px 26px;border-bottom:1px solid var(--border);background:var(--stone);}
+.form-header-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--ink);}
+.form-header-sub{font-size:11px;color:var(--muted);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.form-body{padding:26px;}
+
+/* FIELDS */
+.field{margin-bottom:18px;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.field label{display:block;font-size:10px;font-weight:700;color:var(--ink2);margin-bottom:7px;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
+.field input,.field select{width:100%;background:var(--off);border:1.5px solid var(--border);border-radius:9px;padding:11px 14px;color:var(--ink);font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:500;outline:none;transition:all .18s;}
+.field input:focus,.field select:focus{border-color:var(--forest2);background:var(--white);box-shadow:0 0 0 3px rgba(13,122,92,0.08);}
+.field input::placeholder{color:var(--muted2);}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237a7870' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer;appearance:none;}
+.field-hint{font-size:10px;color:var(--muted2);margin-top:5px;font-family:'JetBrains Mono',monospace;line-height:1.4;}
+.field-hint.green{color:var(--forest2);}
+
+/* SECTION SEP */
+.section-sep{display:flex;align-items:center;gap:10px;margin:22px 0 16px;}
+.section-sep-line{flex:1;height:1px;background:var(--border);}
+.section-sep-text{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--muted2);text-transform:uppercase;white-space:nowrap;}
+
+/* BUTTON */
+.calc-btn{width:100%;padding:15px;background:var(--ink);border:none;border-radius:10px;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:4px;}
+.calc-btn:hover{background:var(--ink2);transform:translateY(-1px);box-shadow:0 8px 28px rgba(20,20,16,0.2);}
+.calc-btn:disabled{background:var(--muted2);cursor:not-allowed;transform:none;}
+.btn-arrow{transition:transform .2s;}
+.calc-btn:hover .btn-arrow{transform:translateX(4px);}
+
+/* RESULTS */
+.results-panel{display:flex;flex-direction:column;gap:18px;}
+.result-hidden{display:none;}
+
+/* TOTAL CARD */
+.total-card{background:var(--ink);border-radius:16px;padding:32px;position:relative;overflow:hidden;box-shadow:0 8px 40px rgba(20,20,16,0.18);}
+.total-card::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:var(--forest2);opacity:.06;}
+.total-card::after{content:'';position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:#f59e0b;opacity:.04;}
+.total-eyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.2em;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:10px;}
+.total-amount{font-family:'Playfair Display',serif;font-size:clamp(38px,5vw,56px);font-weight:900;color:#fff;line-height:1;margin-bottom:6px;}
+.total-usd{font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(255,255,255,0.4);}
+.total-per{font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;}
+.total-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin-top:24px;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;}
+.total-mini{text-align:center;border-right:1px solid rgba(255,255,255,0.08);padding:0 12px;}
+.total-mini:last-child{border-right:none;}
+.total-mini-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:#fff;}
+.total-mini-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.3);letter-spacing:.08em;text-transform:uppercase;margin-top:3px;}
+
+/* BREAKDOWN */
+.breakdown-card{background:var(--white);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.04);}
+.breakdown-header{padding:18px 22px;border-bottom:1px solid var(--border);background:var(--stone);display:flex;align-items:center;justify-content:space-between;}
+.breakdown-title{font-size:11px;font-weight:700;color:var(--ink);letter-spacing:.04em;font-family:'JetBrains Mono',monospace;text-transform:uppercase;}
+.brow{display:flex;justify-content:space-between;align-items:center;padding:11px 22px;transition:background .12s;border-bottom:1px solid var(--border);}
+.brow:last-child{border-bottom:none;}
+.brow:hover{background:var(--off);}
+.brow-left{display:flex;align-items:center;gap:10px;}
+.brow-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.brow-name{font-size:12.5px;color:var(--ink2);font-weight:500;}
+.brow-note{font-size:10px;color:var(--muted2);font-family:'JetBrains Mono',monospace;margin-top:1px;}
+.brow-right{text-align:right;}
+.brow-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--ink);}
+.brow-pct{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted2);}
+.brow-divider{height:1px;background:var(--stone2);margin:4px 0;}
+.brow.brow-total{background:var(--forest-light);border-top:2px solid var(--forest-mid);}
+.brow.brow-total .brow-name{font-weight:800;font-size:13px;color:var(--forest);}
+.brow.brow-total .brow-val{color:var(--forest);font-size:15px;}
+
+/* CHARTS */
+.charts-card{background:var(--white);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.04);}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;}
+.chart-pane{padding:22px;border-right:1px solid var(--border);}
+.chart-pane:last-child{border-right:none;}
+.chart-pane-title{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.chart-pane-sub{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:16px;}
+.chart-wrap{height:200px;position:relative;}
+@media(max-width:700px){.charts-grid{grid-template-columns:1fr;}.chart-pane{border-right:none;border-bottom:1px solid var(--border);}}
+
+.duty-note-box{background:var(--amber-l);border:1px solid var(--amber-m);border-radius:10px;padding:14px 16px;margin:16px 22px;font-size:11.5px;color:var(--amber);line-height:1.6;font-weight:500;}
+.alert-box{border-radius:10px;padding:12px 16px;margin:8px 22px;font-size:12px;line-height:1.5;}
+.alert-red{background:var(--red-l);border:1px solid #fca5a5;color:var(--red);}
+.alert-green{background:var(--forest-light);border:1px solid var(--forest-mid);color:var(--forest);}
+
+/* TIPS */
+.tips-section{background:var(--white);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.04);margin-top:28px;}
+.tips-header{padding:22px 28px;border-bottom:1px solid var(--border);background:var(--ink);}
+.tips-header-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:#fff;}
+.tips-header-sub{font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;font-family:'JetBrains Mono',monospace;}
+.tips-grid{display:grid;grid-template-columns:repeat(3,1fr);}
+@media(max-width:800px){.tips-grid{grid-template-columns:1fr;}}
+.tip{padding:24px 26px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);transition:background .15s;}
+.tip:hover{background:var(--off);}
+.tip:nth-child(3n){border-right:none;}
+.tip:nth-child(n+4){border-bottom:none;}
+.tip-icon{font-size:22px;margin-bottom:12px;}
+.tip-title{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+.tip-body{font-size:12px;color:var(--muted);line-height:1.65;}
+
+/* EMPTY */
+.empty-state{padding:48px 22px;text-align:center;}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.3;}
+.empty-title{font-size:14px;font-weight:700;color:var(--ink2);margin-bottom:6px;}
+.empty-sub{font-size:12px;color:var(--muted2);}
+
+/* FOOTER */
+.site-footer{background:var(--ink);padding:28px 40px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin-top:40px;}
+.footer-brand{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,0.5);}
+.footer-brand strong{color:#fff;}
+.footer-data{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.3);}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.anim{animation:fadeUp .35s ease forwards;}
+
+/* FX status indicator */
+.fx-status{font-family:'JetBrains Mono',monospace;font-size:9px;padding:3px 10px;border-radius:100px;}
+.fx-status.loading{background:rgba(251,191,36,0.1);color:#fbbf24;border:1px solid rgba(251,191,36,0.2);}
+.fx-status.live{background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.2);}
+.fx-status.error{background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">NaijaImport<span>.calc</span></div>
+  <div class="topbar-right">
+    <div class="topbar-tag">NIGERIA CUSTOMS SERVICE · 2024 TARIFF SCHEDULE</div>
+    <div id="api-status" class="fx-status loading">⟳ LOADING RATES</div>
+    <div class="live-badge"><div class="live-dot"></div><div class="live-text">LIVE FX</div></div>
+  </div>
+</div>
+
+<!-- FX STRIP -->
+<div class="fx-strip" id="fx-strip">
+  <div class="fx-loading">⟳ Fetching live exchange rates from CBN / ExchangeRate-API...</div>
+</div>
+
+<!-- STAT STRIP -->
+<div class="stat-strip">
+  <div class="stat-item">
+    <div class="stat-val" id="stat-usd">—</div>
+    <div class="stat-lbl">USD/NGN Live</div>
+    <div class="stat-chg" style="color:#f87171;" id="stat-usd-note">Loading...</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val">7.5%</div>
+    <div class="stat-lbl">VAT Rate</div>
+    <div class="stat-chg" style="color:#4ade80;">Standard 2024</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val">5–35%</div>
+    <div class="stat-lbl">Import Duty Range</div>
+    <div class="stat-chg" style="color:#4ade80;">By product category</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val">1%</div>
+    <div class="stat-lbl">CISS Inspection</div>
+    <div class="stat-chg" style="color:#4ade80;">On CIF value</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-val">22 days</div>
+    <div class="stat-lbl">Avg Port Clearance</div>
+    <div class="stat-chg" style="color:#facc15;">Apapa Port Lagos</div>
+  </div>
+  <div class="stat-item" style="border-right:none;">
+    <div class="stat-val" id="stat-updated">—</div>
+    <div class="stat-lbl">Rates Updated</div>
+    <div class="stat-chg" style="color:#4ade80;">Auto-refresh on load</div>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-pre">Nigeria Import Intelligence Tool</div>
+  <h1>Calculate Your <em>Real</em><br/>Landed Cost</h1>
+  <p class="hero-sub">The only Nigerian import calculator with <strong>live exchange rates</strong> — every charge included: customs duty, CISS, ETLS, port clearance, marine insurance, agent fees, and VAT. Rates update automatically from the live market.</p>
+  <div class="hero-meta">
+    <div class="meta-tag"><div class="meta-dot"></div> Live CBN FX Rates</div>
+    <div class="meta-tag"><div class="meta-dot"></div> NCS 2024 Duty Schedule</div>
+    <div class="meta-tag"><div class="meta-dot"></div> 10 Source Countries</div>
+    <div class="meta-tag"><div class="meta-dot"></div> FX Sensitivity Analysis</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="two-col">
+
+    <!-- FORM -->
+    <div class="form-card">
+      <div class="form-header">
+        <div class="form-header-title">Import Details</div>
+        <div class="form-header-sub">Fill all fields · Rates are live from market</div>
+      </div>
+      <div class="form-body">
+
+        <div class="field">
+          <label>Product Category <span style="color:var(--red);">*</span></label>
+          <select id="category" onchange="onCategoryChange()">
+            <optgroup label="📱 Electronics & Technology">
+              <option value="phones" data-duty="20" data-levy="1" data-vat="7.5">Mobile Phones & Smartphones</option>
+              <option value="computers" data-duty="10" data-levy="0" data-vat="7.5">Computers, Laptops & Tablets</option>
+              <option value="tv_audio" data-duty="20" data-levy="1" data-vat="7.5">TVs, Audio & Visual Equipment</option>
+              <option value="elec_acc" data-duty="20" data-levy="1" data-vat="7.5">Electronics Accessories & Cables</option>
+              <option value="solar" data-duty="5" data-levy="0" data-vat="7.5">Solar & Renewable Energy Equipment</option>
+            </optgroup>
+            <optgroup label="🛒 FMCG & Food">
+              <option value="processed_food" data-duty="20" data-levy="1" data-vat="0">Processed Foods & Packaged Beverages</option>
+              <option value="rice_wheat" data-duty="5" data-levy="0" data-vat="0">Rice, Wheat & Grains</option>
+              <option value="sugar" data-duty="20" data-levy="1" data-vat="0">Sugar & Confectionery</option>
+              <option value="household" data-duty="20" data-levy="1" data-vat="7.5">Household & Personal Care Products</option>
+              <option value="cosmetics" data-duty="20" data-levy="1" data-vat="7.5">Cosmetics & Beauty Products</option>
+            </optgroup>
+            <optgroup label="💊 Pharmaceuticals">
+              <option value="medicines" data-duty="0" data-levy="0" data-vat="0">Medicines & Pharmaceutical Drugs</option>
+              <option value="medical_equip" data-duty="5" data-levy="0" data-vat="0">Medical Equipment & Devices</option>
+            </optgroup>
+            <optgroup label="🚗 Automotive & Spare Parts">
+              <option value="spare_parts" data-duty="20" data-levy="1" data-vat="7.5">Engine & Mechanical Spare Parts</option>
+              <option value="vehicles_cars" data-duty="35" data-levy="2" data-vat="7.5">Passenger Vehicles (Cars)</option>
+              <option value="trucks" data-duty="35" data-levy="2" data-vat="7.5">Commercial Trucks & Buses</option>
+              <option value="tyres" data-duty="20" data-levy="1" data-vat="7.5">Tyres & Rubber Products</option>
+              <option value="lubricants" data-duty="10" data-levy="0.5" data-vat="7.5">Lubricants & Engine Oil</option>
+            </optgroup>
+            <optgroup label="🏭 Industrial & Manufacturing">
+              <option value="machinery" data-duty="5" data-levy="0" data-vat="7.5">Industrial Machinery & Equipment</option>
+              <option value="generators" data-duty="10" data-levy="0.5" data-vat="7.5">Generators & Power Equipment</option>
+              <option value="steel_iron" data-duty="10" data-levy="0.5" data-vat="7.5">Steel, Iron & Metal Products</option>
+              <option value="chemicals" data-duty="5" data-levy="0" data-vat="7.5">Industrial Chemicals & Raw Inputs</option>
+            </optgroup>
+            <optgroup label="🏗️ Construction Materials">
+              <option value="cement_tiles" data-duty="10" data-levy="0.5" data-vat="7.5">Tiles, Ceramics & Sanitary Ware</option>
+              <option value="electrical_mat" data-duty="10" data-levy="0.5" data-vat="7.5">Electrical Fittings & Wire</option>
+              <option value="paint" data-duty="20" data-levy="1" data-vat="7.5">Paint & Finishing Materials</option>
+            </optgroup>
+            <optgroup label="👗 Textiles & Fashion">
+              <option value="fabric" data-duty="20" data-levy="1" data-vat="7.5">Fabrics & Textiles</option>
+              <option value="clothing" data-duty="35" data-levy="2" data-vat="7.5">Clothing & Apparel</option>
+              <option value="footwear" data-duty="35" data-levy="2" data-vat="7.5">Footwear & Shoes</option>
+            </optgroup>
+            <optgroup label="🌾 Agriculture">
+              <option value="fertilizer" data-duty="0" data-levy="0" data-vat="0">Fertilizers & Agro-Chemicals</option>
+              <option value="agri_produce" data-duty="5" data-levy="0" data-vat="0">Agricultural Produce</option>
+            </optgroup>
+          </select>
+          <div class="field-hint" id="duty-hint">Import Duty: 20% · ECOWAS Levy: 1% · VAT: 7.5%</div>
+        </div>
+
+        <div class="field">
+          <label>Product Name / Description</label>
+          <input type="text" id="product-name" placeholder="e.g. Samsung Galaxy A55, Indomie Carton ×500, Engine Oil 5L"/>
+        </div>
+
+        <div class="section-sep">
+          <div class="section-sep-line"></div>
+          <div class="section-sep-text">Origin & Pricing</div>
+          <div class="section-sep-line"></div>
+        </div>
+
+        <div class="field">
+          <label>Source Country <span style="color:var(--red);">*</span></label>
+          <select id="country" onchange="onCountryChange()">
+            <option value="CNY" data-ship="185000" data-transit="45" data-port="Apapa / Tin Can">🇨🇳 China (Guangzhou, Shenzhen, Yiwu)</option>
+            <option value="USD_USA" data-ship="320000" data-transit="21" data-port="Apapa / Onne">🇺🇸 United States of America</option>
+            <option value="GBP" data-ship="290000" data-transit="18" data-port="Apapa">🇬🇧 United Kingdom</option>
+            <option value="EUR" data-ship="265000" data-transit="16" data-port="Apapa">🇩🇪 Germany / Europe (EU)</option>
+            <option value="INR" data-ship="145000" data-transit="22" data-port="Onne / Apapa">🇮🇳 India (Mumbai, Surat, Delhi)</option>
+            <option value="AED" data-ship="92000" data-transit="10" data-port="Apapa / Tin Can">🇦🇪 UAE / Dubai (Jebel Ali)</option>
+            <option value="USD_KR" data-ship="215000" data-transit="35" data-port="Apapa">🇰🇷 South Korea</option>
+            <option value="USD_JP" data-ship="235000" data-transit="38" data-port="Apapa">🇯🇵 Japan</option>
+            <option value="USD_SA" data-ship="62000" data-transit="6" data-port="Onne / Calabar">🇿🇦 South Africa</option>
+            <option value="TRY" data-ship="175000" data-transit="14" data-port="Apapa">🇹🇷 Turkey (Istanbul, Izmir)</option>
+          </select>
+          <div class="field-hint" id="country-hint">Transit: 45 days · Port: Apapa / Tin Can · Est. freight: ₦185,000</div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Unit Cost (USD $) <span style="color:var(--red);">*</span></label>
+            <input type="number" id="unit-cost" placeholder="250.00" min="0" step="0.01" oninput="autoEstimate()"/>
+            <div class="field-hint">FOB / CIF price per unit in USD</div>
+          </div>
+          <div class="field">
+            <label>Quantity (Units) <span style="color:var(--red);">*</span></label>
+            <input type="number" id="qty" placeholder="100" min="1" step="1" oninput="autoEstimate()"/>
+          </div>
+        </div>
+
+        <div id="auto-est" style="display:none;background:var(--forest-light);border:1px solid var(--forest-mid);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--forest);font-family:'JetBrains Mono',monospace;"></div>
+
+        <div class="section-sep">
+          <div class="section-sep-line"></div>
+          <div class="section-sep-text">Shipping & Port</div>
+          <div class="section-sep-line"></div>
+        </div>
+
+        <div class="field">
+          <label>Freight / Shipping Cost (₦) — Optional</label>
+          <input type="number" id="freight" placeholder="Leave blank to auto-estimate"/>
+          <div class="field-hint" id="freight-hint">Auto-estimate: ₦185,000 based on China sea freight</div>
+        </div>
+
+        <div class="field">
+          <label>Port of Entry</label>
+          <select id="port" onchange="onPortChange()">
+            <option value="apapa" data-clear="88000" data-days="22">Apapa Port, Lagos (Busiest)</option>
+            <option value="tincan" data-clear="82000" data-days="18">Tin Can Island Port, Lagos</option>
+            <option value="onne" data-clear="74000" data-days="14">Onne Port, Rivers State (Port Harcourt)</option>
+            <option value="calabar" data-clear="68000" data-days="12">Calabar Port, Cross River State</option>
+            <option value="warri" data-clear="65000" data-days="14">Warri Port, Delta State</option>
+            <option value="kano" data-clear="55000" data-days="10">Kano Inland Dry Port</option>
+          </select>
+          <div class="field-hint" id="port-hint">Avg clearance: 22 days · Agent fee base: ~₦88,000</div>
+        </div>
+
+        <button class="calc-btn" onclick="calculate()" id="calc-btn" disabled>
+          <span id="btn-text">⟳ Loading live rates...</span> <span class="btn-arrow">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results-panel" id="results-panel">
+      <div id="empty-state" class="breakdown-card">
+        <div class="empty-state">
+          <div class="empty-icon">⚡</div>
+          <div class="empty-title">Ready to Calculate</div>
+          <div class="empty-sub">Fill in your product details and click Calculate to see your full landed cost with live exchange rates.</div>
+        </div>
+      </div>
+
+      <div class="total-card result-hidden anim" id="res-total-card">
+        <div class="total-eyebrow">Total Landed Cost — Nigeria (Live Rates)</div>
+        <div class="total-amount" id="res-amount">₦0</div>
+        <div class="total-usd" id="res-usd"></div>
+        <div class="total-per" id="res-per"></div>
+        <div class="total-grid">
+          <div class="total-mini"><div class="total-mini-val" id="res-markup">0%</div><div class="total-mini-lbl">Total Markup</div></div>
+          <div class="total-mini"><div class="total-mini-val" id="res-duty-total">₦0</div><div class="total-mini-lbl">Duties + VAT</div></div>
+          <div class="total-mini"><div class="total-mini-val" id="res-min-sell">₦0</div><div class="total-mini-lbl">Min. Sell (+20%)</div></div>
+        </div>
+      </div>
+
+      <div class="breakdown-card result-hidden anim" id="res-breakdown">
+        <div class="breakdown-header">
+          <div class="breakdown-title">Full Cost Breakdown</div>
+          <div id="product-label" style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;"></div>
+        </div>
+        <div id="breakdown-body"></div>
+        <div id="duty-note-box"></div>
+        <div id="alert-boxes"></div>
+      </div>
+
+      <div class="charts-card result-hidden anim" id="res-charts">
+        <div class="breakdown-header"><div class="breakdown-title">Visual Analysis</div></div>
+        <div class="charts-grid">
+          <div class="chart-pane">
+            <div class="chart-pane-title">Cost Structure</div>
+            <div class="chart-pane-sub">What makes up your total cost</div>
+            <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+          </div>
+          <div class="chart-pane">
+            <div class="chart-pane-title">FX Sensitivity</div>
+            <div class="chart-pane-sub">How Naira weakness affects your cost</div>
+            <div class="chart-wrap"><canvas id="fxChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIPS -->
+  <div class="tips-section">
+    <div class="tips-header">
+      <div class="tips-header-title">Expert Cost-Saving Strategies</div>
+      <div class="tips-header-sub">From a Procurement Manager — real advice for Nigerian importers</div>
+    </div>
+    <div class="tips-grid">
+      <div class="tip"><div class="tip-icon">💱</div><div class="tip-title">Hedge Your FX Exposure Early</div><div class="tip-body">USD/NGN moved from ₦416 → ₦1,590+ in two years. Open a domiciliary account and purchase USD when rates are favorable. On a $50,000 PO, a ₦200 rate swing equals ₦10M in extra cost.</div></div>
+      <div class="tip"><div class="tip-icon">🇦🇪</div><div class="tip-title">Source via Dubai to Cut Lead Time</div><div class="tip-body">UAE transit averages 10 days vs 45 days from China. Faster clearance = lower demurrage at Apapa. For urgent orders, the Dubai premium often costs less than 2 weeks of port storage fees.</div></div>
+      <div class="tip"><div class="tip-icon">⚓</div><div class="tip-title">Use Onne or Calabar — Not Always Apapa</div><div class="tip-body">Apapa congestion adds 3–14 extra days. Onne Port (Rivers State) and Calabar process 30–40% faster and clearing fees are 15–20% lower. Better for South-South and South-East bound cargo.</div></div>
+      <div class="tip"><div class="tip-icon">📋</div><div class="tip-title">Classify Your HS Code Correctly First Time</div><div class="tip-body">Wrong HS Code is Nigeria's #1 customs dispute trigger. Electronics misclassified as accessories means paying wrong duty. Engage a licensed customs broker before the goods ship — not after arrival.</div></div>
+      <div class="tip"><div class="tip-icon">🏭</div><div class="tip-title">ETLS Certification = 0% Duty from ECOWAS</div><div class="tip-body">If your ECOWAS-based supplier (Ghana, Benin, Côte d'Ivoire) has ETLS certification, qualifying goods attract 0% import duty. Can save 5–20% on every shipment permanently.</div></div>
+      <div class="tip"><div class="tip-icon">📦</div><div class="tip-title">Consolidate Shipments to Reduce Fixed Costs</div><div class="tip-body">Terminal handling and CISS inspection have fixed base components. Shipping 500 units instead of 100 spreads these costs, cutting per-unit landed cost by 8–15%.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="site-footer">
+  <div class="footer-brand">Built by <strong>Miracle Ugokwe</strong> · Procurement Manager & Data Analyst · MSc Procurement, FUTO · MCJEH Digital</div>
+  <div class="footer-data">FX: ExchangeRate-API (live) · Duties: Nigerian Customs Service Tariff 2024 · Port Charges: NPA Schedule</div>
+</div>
+
+<script>
+// ── LIVE FX ──
+const API_KEY = 'c31305d8c28ceaa6689c4d07';
+const API_URL = `https://v6.exchangerate-api.com/v6/${API_KEY}/latest/USD`;
+
+// FX store — keyed by currency code
+let FX = { USD: 1, NGN: 1590, CNY: 7.25, EUR: 0.92, GBP: 0.79, INR: 83.2, AED: 3.67, TRY: 32.5 };
+let NGN_PER = {}; // USD value → NGN
+let ratesLoaded = false;
+let lastUpdated = '';
+
+async function loadRates() {
+  try {
+    document.getElementById('api-status').textContent = '⟳ FETCHING RATES';
+    document.getElementById('api-status').className = 'fx-status loading';
+
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    if (data.result === 'success') {
+      FX = data.conversion_rates;
+      // NGN per 1 unit of each currency
+      const ngnRate = FX.NGN; // NGN per 1 USD
+      NGN_PER = {
+        USD: ngnRate,
+        CNY: ngnRate / FX.CNY,
+        EUR: ngnRate / FX.EUR,
+        GBP: ngnRate / FX.GBP,
+        INR: ngnRate / FX.INR,
+        AED: ngnRate / FX.AED,
+        TRY: ngnRate / FX.TRY,
+      };
+
+      const now = new Date();
+      lastUpdated = now.toLocaleTimeString('en-NG', {hour:'2-digit',minute:'2-digit'});
+
+      // Update FX strip
+      renderFXStrip(ngnRate);
+
+      // Update stat strip
+      document.getElementById('stat-usd').textContent = '₦' + Math.round(ngnRate).toLocaleString();
+      document.getElementById('stat-usd-note').textContent = '▲ Live market rate';
+      document.getElementById('stat-updated').textContent = lastUpdated;
+
+      // Update status
+      document.getElementById('api-status').textContent = '✓ LIVE RATES';
+      document.getElementById('api-status').className = 'fx-status live';
+
+      // Enable button
+      ratesLoaded = true;
+      document.getElementById('calc-btn').disabled = false;
+      document.getElementById('btn-text').textContent = 'Calculate Landed Cost';
+
+      // Update topbar tag
+      document.querySelector('.topbar-tag').textContent = 'LIVE RATES · UPDATED ' + lastUpdated;
+
+    } else {
+      throw new Error('API error: ' + data['error-type']);
+    }
+  } catch (e) {
+    console.warn('FX API failed, using fallback rates:', e);
+    // Fallback to hardcoded
+    NGN_PER = { USD:1590, CNY:219, EUR:1724, GBP:2012, INR:19.1, AED:433, TRY:49 };
+    renderFXStrip(1590);
+    document.getElementById('stat-usd').textContent = '₦1,590';
+    document.getElementById('stat-usd-note').textContent = 'Fallback rate';
+    document.getElementById('stat-updated').textContent = 'Fallback';
+    document.getElementById('api-status').textContent = '⚠ FALLBACK RATES';
+    document.getElementById('api-status').className = 'fx-status error';
+    ratesLoaded = true;
+    document.getElementById('calc-btn').disabled = false;
+    document.getElementById('btn-text').textContent = 'Calculate Landed Cost';
+  }
+}
+
+function renderFXStrip(ngnUSD) {
+  const pairs = [
+    { label:'USD/NGN', val: Math.round(NGN_PER.USD).toLocaleString() },
+    { label:'EUR/NGN', val: Math.round(NGN_PER.EUR).toLocaleString() },
+    { label:'GBP/NGN', val: Math.round(NGN_PER.GBP).toLocaleString() },
+    { label:'CNY/NGN', val: NGN_PER.CNY.toFixed(2) },
+    { label:'AED/NGN', val: Math.round(NGN_PER.AED).toLocaleString() },
+    { label:'INR/NGN', val: NGN_PER.INR.toFixed(2) },
+    { label:'TRY/NGN', val: Math.round(NGN_PER.TRY).toLocaleString() },
+  ];
+  document.getElementById('fx-strip').innerHTML = pairs.map(p =>
+    `<div class="fx-pair"><div class="fx-name">${p.label}</div><div class="fx-val">${p.val}</div></div>`
+  ).join('');
+}
+
+// ── HELPERS ──
+function fmt(n) { return '₦' + Math.round(n).toLocaleString(); }
+function fmtU(n) { return '$' + (n / NGN_PER.USD).toLocaleString('en', {minimumFractionDigits:0,maximumFractionDigits:0}); }
+
+function getCurrencyForCountry(countryVal) {
+  if(countryVal.startsWith('USD')) return 'USD';
+  return countryVal; // CNY, EUR, GBP, INR, AED, TRY
+}
+
+function onCategoryChange() {
+  const o = document.getElementById('category').options[document.getElementById('category').selectedIndex];
+  document.getElementById('duty-hint').textContent = `Import Duty: ${o.dataset.duty}% · ECOWAS Levy: ${o.dataset.levy}% · VAT: ${o.dataset.vat==='0'?'EXEMPT':'7.5%'}`;
+  autoEstimate();
+}
+
+function onCountryChange() {
+  const o = document.getElementById('country').options[document.getElementById('country').selectedIndex];
+  const curr = getCurrencyForCountry(o.value);
+  const rate = NGN_PER[curr] || NGN_PER.USD;
+  document.getElementById('country-hint').textContent =
+    `Transit: ${o.dataset.transit} days · Port: ${o.dataset.port} · Est. freight: ₦${parseInt(o.dataset.ship).toLocaleString()} · Rate: ₦${Math.round(rate).toLocaleString()}/${curr}`;
+  document.getElementById('freight-hint').textContent =
+    `Auto-estimate: ₦${parseInt(o.dataset.ship).toLocaleString()} based on ${o.text.split('(')[0].trim()} sea freight`;
+  autoEstimate();
+}
+
+function onPortChange() {
+  const o = document.getElementById('port').options[document.getElementById('port').selectedIndex];
+  document.getElementById('port-hint').textContent =
+    `Avg clearance: ${o.dataset.days} days · Agent fee base: ~₦${parseInt(o.dataset.clear).toLocaleString()}`;
+}
+
+function autoEstimate() {
+  if (!ratesLoaded) return;
+  const usd = parseFloat(document.getElementById('unit-cost').value) || 0;
+  const qty = parseInt(document.getElementById('qty').value) || 0;
+  const el = document.getElementById('auto-est');
+  if (usd > 0 && qty > 0) {
+    const rough = usd * qty * NGN_PER.USD * 1.55;
+    el.textContent = `Quick estimate: ~${fmt(rough)} total landed (±15%) · Click Calculate for exact breakdown`;
+    el.style.display = 'block';
+  } else { el.style.display = 'none'; }
+}
+
+let pieInst = null, fxInst = null;
+
+function calculate() {
+  const catSel = document.getElementById('category');
+  const catOpt = catSel.options[catSel.selectedIndex];
+  const dutyR = parseFloat(catOpt.dataset.duty) / 100;
+  const levyR = parseFloat(catOpt.dataset.levy) / 100;
+  const vatR = parseFloat(catOpt.dataset.vat) / 100;
+
+  const countrySel = document.getElementById('country');
+  const countryOpt = countrySel.options[countrySel.selectedIndex];
+  const estFreight = parseInt(countryOpt.dataset.ship);
+  const curr = getCurrencyForCountry(countryOpt.value);
+  const liveRate = NGN_PER[curr] || NGN_PER.USD;
+
+  const portSel = document.getElementById('port');
+  const portOpt = portSel.options[portSel.selectedIndex];
+  const clearBase = parseInt(portOpt.dataset.clear);
+
+  const unitUSD = parseFloat(document.getElementById('unit-cost').value) || 0;
+  const qty = parseInt(document.getElementById('qty').value) || 1;
+  const freightRaw = document.getElementById('freight').value;
+  const freight = freightRaw ? parseFloat(freightRaw) : estFreight;
+
+  if (unitUSD <= 0) {
+    alert('Please enter a unit cost in USD.');
+    document.getElementById('unit-cost').focus();
+    return;
+  }
+
+  // ── CORE CALC using LIVE rate ──
+  const fobTotal = unitUSD * liveRate * qty;
+  const freightTotal = freight;
+  const insurance = fobTotal * 0.005;
+  const cif = fobTotal + freightTotal + insurance;
+
+  const importDuty = cif * dutyR;
+  const ecowasLevy = cif * levyR;
+  const ciss = cif * 0.01;
+  const etls = cif * 0.005;
+  const surcharge = importDuty * 0.07;
+  const allDuties = importDuty + ecowasLevy + ciss + etls + surcharge;
+
+  const vatBase = cif + allDuties;
+  const vat = vatBase * vatR;
+
+  const thc = cif * 0.02;
+  const clearing = clearBase * (Math.ceil(qty / 100) + 1);
+  const portTotal = thc + clearing;
+
+  const grandTotal = cif + allDuties + vat + portTotal;
+  const perUnit = grandTotal / qty;
+  const markup = ((grandTotal / fobTotal) - 1) * 100;
+  const minSell = grandTotal * 1.2;
+
+  // ── SHOW RESULTS ──
+  document.getElementById('empty-state').style.display = 'none';
+  ['res-total-card','res-breakdown','res-charts'].forEach(id => {
+    document.getElementById(id).classList.remove('result-hidden');
+  });
+
+  document.getElementById('res-amount').textContent = fmt(grandTotal);
+  document.getElementById('res-usd').textContent = fmtU(grandTotal) + ` USD at live rate ₦${Math.round(liveRate).toLocaleString()}/${curr}`;
+  document.getElementById('res-per').textContent = fmt(perUnit) + ' per unit · ' + fmtU(perUnit) + ' per unit';
+  document.getElementById('res-markup').textContent = markup.toFixed(1) + '%';
+  document.getElementById('res-duty-total').textContent = fmt(allDuties + vat);
+  document.getElementById('res-min-sell').textContent = fmt(minSell / qty) + '/unit';
+
+  const pname = document.getElementById('product-name').value || catOpt.text;
+  document.getElementById('product-label').textContent = pname + ' · ' + qty + ' units · Rate ₦' + Math.round(liveRate).toLocaleString();
+
+  // ── BREAKDOWN ──
+  const rows = [
+    {group:'Product & Shipping'},
+    {name:'Product Cost (FOB)',val:fobTotal,color:'#1a3a6e',note:`${qty} × $${unitUSD.toFixed(2)} × ₦${Math.round(liveRate).toLocaleString()} (live ${curr}/NGN)`},
+    {name:'Freight & Shipping',val:freightTotal,color:'#2563eb',note:countryOpt.text.split('(')[0].trim()+' → Nigeria'},
+    {name:'Marine Insurance (0.5%)',val:insurance,color:'#3b82f6',note:'Standard cargo insurance on CIF'},
+    {divider:true},
+    {group:'Customs Duties & Government Levies'},
+    {name:`Import Duty (${Math.round(dutyR*100)}%)`,val:importDuty,color:'#b45309',note:'Nigerian Customs Service Tariff 2024'},
+    {name:`ECOWAS Trade Levy (${(levyR*100).toFixed(1)}%)`,val:ecowasLevy,color:'#d97706',note:'ECOWAS Trade Liberalization Scheme'},
+    {name:'CISS Inspection Fee (1%)',val:ciss,color:'#f59e0b',note:'Comprehensive Import Supervision Scheme'},
+    {name:'ETLS Levy (0.5%)',val:etls,color:'#fbbf24',note:'Economic Community Levy'},
+    {name:'Surcharge on Import Duty (7%)',val:surcharge,color:'#92400e',note:'Applied on import duty value'},
+    {divider:true},
+    {group:'Tax'},
+    {name:vatR>0?'VAT (7.5% on CIF + Duties)':'VAT — EXEMPT for this category',val:vat,color:'#065f46',note:vatR>0?'Federal Inland Revenue Service 2024':'Category exempt under FIRS Schedule'},
+    {divider:true},
+    {group:'Port & Clearing'},
+    {name:'Terminal Handling Charge (2%)',val:thc,color:'#1e3a5f',note:portOpt.text},
+    {name:'Customs Clearing Agent Fee',val:clearing,color:'#374151',note:'Licensed NCS clearing agent · scales with quantity'},
+    {divider:true},
+    {total:true,name:'TOTAL LANDED COST',val:grandTotal},
+  ];
+
+  const bd = document.getElementById('breakdown-body');
+  bd.innerHTML = '';
+  rows.forEach(r => {
+    if (r.group) {
+      bd.innerHTML += `<div style="padding:8px 22px 4px;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--muted2);text-transform:uppercase;background:var(--stone);border-bottom:1px solid var(--border);">${r.group}</div>`;
+      return;
+    }
+    if (r.divider) { bd.innerHTML += `<div class="brow-divider"></div>`; return; }
+    if (r.total) {
+      bd.innerHTML += `<div class="brow brow-total"><div class="brow-left"><div class="brow-dot" style="background:var(--forest);"></div><div><div class="brow-name">${r.name}</div></div></div><div class="brow-right"><div class="brow-val">${fmt(r.val)}</div><div class="brow-pct">100%</div></div></div>`;
+      return;
+    }
+    const pct = ((r.val / grandTotal) * 100).toFixed(1);
+    bd.innerHTML += `<div class="brow"><div class="brow-left"><div class="brow-dot" style="background:${r.color};"></div><div><div class="brow-name">${r.name}</div><div class="brow-note">${r.note}</div></div></div><div class="brow-right"><div class="brow-val" style="color:${r.color};">${fmt(r.val)}</div><div class="brow-pct">${pct}% of total</div></div></div>`;
+  });
+
+  document.getElementById('duty-note-box').innerHTML =
+    `<div class="duty-note-box">ℹ️ <strong>${pname}</strong> — Import duty: ${Math.round(dutyR*100)}% · Live rate used: ₦${Math.round(liveRate).toLocaleString()}/${curr} (fetched ${lastUpdated}). Total cost markup from FOB: <strong>${markup.toFixed(1)}%</strong>. Minimum selling price at 20% margin: <strong>${fmt(minSell/qty)}</strong> per unit. Always confirm HS Code with a licensed NCS broker before shipment.</div>`;
+
+  let alerts = '';
+  if (markup > 80) alerts += `<div class="alert-box alert-red">⚠️ <strong>High Cost Markup Alert:</strong> Your landed cost is ${markup.toFixed(1)}% above FOB price. Consider local sourcing alternatives or Dubai re-export to reduce import duties and freight.</div>`;
+  if (dutyR === 0) alerts += `<div class="alert-box alert-green">✅ <strong>Duty Exempt:</strong> This category is exempt from import duty. Ensure your documentation correctly reflects the HS Code to maintain exemption at port.</div>`;
+  if (vatR === 0) alerts += `<div class="alert-box alert-green">✅ <strong>VAT Exempt:</strong> This category is VAT-exempt (food, medicines, agro inputs). Confirm with your customs broker at filing.</div>`;
+  document.getElementById('alert-boxes').innerHTML = alerts;
+
+  // ── PIE CHART ──
+  const pieData = [fobTotal, freightTotal+insurance, allDuties, vat, portTotal];
+  const pieLabels = ['Product Cost (FOB)','Freight & Insurance','Duties & Levies','VAT','Port & Clearing'];
+  const pieColors = ['#1a3a6e','#3b82f6','#f59e0b','#10b981','#6b7280'];
+  if (pieInst) pieInst.destroy();
+  pieInst = new Chart(document.getElementById('pieChart'), {
+    type:'doughnut',
+    data:{labels:pieLabels,datasets:[{data:pieData,backgroundColor:pieColors,borderColor:'#fff',borderWidth:3,hoverOffset:6}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'bottom',labels:{color:'#7a7870',boxWidth:9,font:{size:9,family:'JetBrains Mono'},padding:10}},
+        tooltip:{backgroundColor:'#141410',titleColor:'#fff',bodyColor:'#a09e96',
+          callbacks:{label:c=>' '+c.label+': '+fmt(c.raw)+' ('+((c.raw/grandTotal)*100).toFixed(1)+'%)'}}}}
+  });
+
+  // ── FX SENSITIVITY using live base ──
+  const baseRate = NGN_PER.USD;
+  const scenarioRates = [
+    Math.round(baseRate*0.7),
+    Math.round(baseRate*0.85),
+    Math.round(baseRate),
+    Math.round(baseRate*1.1),
+    Math.round(baseRate*1.25),
+    Math.round(baseRate*1.4),
+    Math.round(baseRate*1.6),
+  ];
+  const fxCosts = scenarioRates.map(rate => {
+    const f2 = unitUSD * rate * qty;
+    const fr2 = freight;
+    const ins2 = f2 * 0.005;
+    const c2 = f2 + fr2 + ins2;
+    const d2 = c2*(dutyR+levyR+0.01+0.005) + c2*dutyR*0.07;
+    const v2 = (c2+d2)*vatR;
+    const p2 = c2*0.02 + clearing;
+    return Math.round((c2+d2+v2+p2)/1e6*10)/10;
+  });
+
+  if (fxInst) fxInst.destroy();
+  const fxCtx = document.getElementById('fxChart').getContext('2d');
+  const grad = fxCtx.createLinearGradient(0,0,0,180);
+  grad.addColorStop(0,'rgba(10,92,68,0.12)'); grad.addColorStop(1,'rgba(10,92,68,0)');
+  fxInst = new Chart(fxCtx, {
+    type:'line',
+    data:{
+      labels: scenarioRates.map(r=>'₦'+r.toLocaleString()),
+      datasets:[{
+        label:'Landed Cost (₦M)', data:fxCosts,
+        borderColor:'#0a5c44', backgroundColor:grad, fill:true, tension:.4, borderWidth:2.5,
+        pointRadius: scenarioRates.map(r=>r===Math.round(baseRate)?7:3),
+        pointBackgroundColor: scenarioRates.map(r=>r===Math.round(baseRate)?'#f59e0b':'#0a5c44'),
+        pointBorderColor:'#fff', pointBorderWidth:2,
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{backgroundColor:'#141410',titleColor:'#fff',bodyColor:'#a09e96',
+          callbacks:{
+            title:c=>'If USD/NGN = '+c[0].label,
+            label:c=>' Total Landed: ₦'+c.raw+'M',
+            afterLabel:c=>scenarioRates[c.dataIndex]===Math.round(baseRate)?' ← Live rate today':''
+          }}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#7a7870',font:{size:9,family:'JetBrains Mono'}},
+          title:{display:true,text:'USD/NGN Rate Scenarios',color:'#7a7870',font:{size:9}}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#7a7870',font:{size:9,family:'JetBrains Mono'},callback:v=>'₦'+v+'M'},
+          title:{display:true,text:'Total Landed Cost',color:'#7a7870',font:{size:9}}}
+      }
+    }
+  });
+
+  document.getElementById('res-total-card').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── INIT ──
+onCategoryChange();
+onPortChange();
+loadRates(); // fetch live rates on page load
+</script>
+</body>
+</html>
